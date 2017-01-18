@@ -1,4 +1,4 @@
-package gorselib
+package rss
 
 import (
 	"encoding/xml"
@@ -55,7 +55,7 @@ type outItemXML struct {
 	GUID        string `xml:"guid"`
 }
 
-// WriteFeedXML takes an RSSFeed and generates and writes an XML file.
+// WriteFeedXML takes a Feed and generates and writes an XML file.
 //
 // This function generates RSS 2.0.1.
 //
@@ -81,7 +81,7 @@ func WriteFeedXML(feed Feed, filename string) error {
 		return err
 	}
 
-	if !config.Quiet {
+	if config.Verbose {
 		log.Printf("Wrote file [%s]", filename)
 	}
 

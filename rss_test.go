@@ -1,4 +1,4 @@
-package gorselib
+package rss
 
 import (
 	"bytes"

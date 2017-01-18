@@ -1,4 +1,4 @@
-package gorselib
+package rss
 
 import (
 	"bytes"
@@ -11,23 +11,6 @@ import (
 
 	"golang.org/x/net/html/charset"
 )
-
-// Feed contains a feed parsed from any format.
-type Feed struct {
-	Title       string
-	Link        string
-	Description string
-	PubDate     time.Time
-	Items       []Item
-}
-
-// Item contains an item/entry in a feed parsed from any format.
-type Item struct {
-	Title       string
-	Link        string
-	Description string
-	PubDate     time.Time
-}
 
 // rssXML is used for parsing/encoding RSS.
 type rssXML struct {
@@ -126,9 +109,10 @@ type atomItemXML struct {
 	Content string `xml:"content"`
 }
 
-// ParseFeedXML takes the raw XML and returns a struct describing the feed.
+// ParseFeedXML takes a feed's raw XML and returns a struct describing the feed.
 //
-// We support various formats. Try our best to decode the feed.
+// We support various formats: RSS, RDF, Atom. We try our best to decode the
+// feed in one of them.
 func ParseFeedXML(data []byte) (*Feed, error) {
 	// It is possible for us to not have valid XML. In such a case, the XML
 	// Decode function will not always complain. One way for this to happen is if
@@ -217,7 +201,7 @@ func parseAsRSS(data []byte) (*Feed, error) {
 		PubDate:     parseTime(rssXML.Channel.PubDate),
 	}
 
-	if !config.Quiet {
+	if config.Verbose {
 		log.Printf("Parsed channel as RSS [%s]", feed.Title)
 	}
 
@@ -265,7 +249,7 @@ func parseAsRDF(data []byte) (*Feed, error) {
 		PubDate:     parseTime(rdfXML.Channel.PubDate),
 	}
 
-	if !config.Quiet {
+	if config.Verbose {
 		log.Printf("Parsed channel as RDF [%s]", feed.Title)
 	}
 
@@ -314,7 +298,7 @@ func parseAsAtom(data []byte) (*Feed, error) {
 		PubDate: parseTime(atomXML.Updated),
 	}
 
-	if !config.Quiet {
+	if config.Verbose {
 		log.Printf("Parsed channel as Atom [%s]", feed.Title)
 	}
 
@@ -342,7 +326,7 @@ func parseAsAtom(data []byte) (*Feed, error) {
 // current time if none succeed.
 func parseTime(pubDate string) time.Time {
 	if len(pubDate) == 0 {
-		if !config.Quiet {
+		if config.Verbose {
 			log.Print("No pub date given - using default.")
 		}
 		return time.Now()
@@ -380,7 +364,7 @@ func parseTime(pubDate string) time.Time {
 		return pubDateTimeParsed
 	}
 
-	if !config.Quiet {
+	if config.Verbose {
 		log.Printf("No format worked for date [%s] - using default - NOW", pubDate)
 	}
 
