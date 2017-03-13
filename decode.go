@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
 )
@@ -114,25 +115,22 @@ type atomItemXML struct {
 // We support various formats: RSS, RDF, Atom. We try our best to decode the
 // feed in one of them.
 func ParseFeedXML(data []byte) (*Feed, error) {
-	// It is possible for us to not have valid XML. In such a case, the XML
-	// Decode function will not always complain. One way for this to happen is if
-	// you do not specify what tag the XML must start with.
-	err := looksLikeXML(data)
+	utf8Data, err := decodeToUTF8AndClean(data)
 	if err != nil {
 		return nil, err
 	}
 
-	channelRSS, errRSS := parseAsRSS(data)
+	channelRSS, errRSS := parseAsRSS(utf8Data)
 	if errRSS == nil {
 		return channelRSS, nil
 	}
 
-	channelRDF, errRDF := parseAsRDF(data)
+	channelRDF, errRDF := parseAsRDF(utf8Data)
 	if errRDF == nil {
 		return channelRDF, nil
 	}
 
-	channelAtom, errAtom := parseAsAtom(data)
+	channelAtom, errAtom := parseAsAtom(utf8Data)
 	if errAtom == nil {
 		return channelAtom, nil
 	}
@@ -141,51 +139,208 @@ func ParseFeedXML(data []byte) (*Feed, error) {
 		errRSS, errRDF, errAtom)
 }
 
-// looksLikeXML applies some simple checks to know if we have an XML document.
-func looksLikeXML(data []byte) error {
-	prefix := `<?xml version="1.0" encoding="`
-
-	if len(data) < len(prefix) {
-		return errors.New("buffer is too short to have XML header")
+// Take raw XML data, and convert it to UTF8 if necessary. Then remove all code
+// points that are not valid for XML.
+//
+// See the XML 1.0 specification for which are valid:
+// https://www.w3.org/TR/2006/REC-xml-20060816/#charsets
+//
+// Note that versions other than 1.0 have differences. However we currently
+// only support 1.0.
+//
+// Why do I remove such code points? I've come across XML in the wild with
+// them. Specifically I encountered U+000B (0x0b). The XML decoder rejects XML
+// with such code points as invalid.
+func decodeToUTF8AndClean(data []byte) ([]byte, error) {
+	// Find the encoding from the XML header.
+	encodingName, err := getEncodingName(data)
+	if err != nil {
+		return nil, err
 	}
 
-	for i := 0; i < len(prefix); i++ {
+	// Convert the payload to UTF-8.
+	utf8Data, err := convertToUTF8(data, encodingName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Strip out any invalid code points.
+	cleanData, err := cleanXMLv1(utf8Data)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we did not change the encoding, then we're done. If we did, then we
+	// need to replace the XML header to reflect that. Otherwise we'll have
+	// issues when we go to unmarshal, as it will think we need to decode.
+	if strings.ToLower(encodingName) == "UTF-8" {
+		return cleanData, err
+	}
+
+	cleanWithNewHeader, err := updateXMLv1HeaderToUTF8(cleanData)
+	if err != nil {
+		return nil, err
+	}
+
+	return cleanWithNewHeader, nil
+}
+
+// Examing the XML header (prolog) for the encoding name.
+//
+// Including the encoding declaration is optional (in fact, the whole prolog
+// is). But if present, it must be after the version info. It may be quoted
+// with single or double quotes.
+//
+// I choose to require both the header and that there be an encoding specified.
+func getEncodingName(data []byte) (string, error) {
+	prefix := `<?xml version="1.0" encoding=`
+
+	if len(data) < len(prefix) {
+		return "", fmt.Errorf("buffer is too short to have an XML header")
+	}
+
+	i := 0
+	for ; i < len(prefix); i++ {
 		if data[i] != prefix[i] {
-			return errors.New("buffer does not have XML header")
+			return "", fmt.Errorf("buffer does not have XML header")
 		}
 	}
 
-	return nil
+	// We should be at a quote character now.
+
+	if i >= len(data) {
+		return "", fmt.Errorf("no encoding found, end of buffer before start quote")
+	}
+
+	if data[i] != '\'' && data[i] != '"' {
+		return "", fmt.Errorf("no encoding found, no start quote")
+	}
+
+	quoteChar := data[i]
+	i++
+
+	name := ""
+	foundEndQuote := false
+	for ; i < len(data); i++ {
+		if data[i] == quoteChar {
+			foundEndQuote = true
+			break
+		}
+
+		// We could enforce which characters we accept here.
+
+		name += string(data[i])
+	}
+
+	if !foundEndQuote {
+		return "", fmt.Errorf("no encoding found, no end quote")
+	}
+
+	if len(name) == 0 {
+		return "", fmt.Errorf("no encoding found")
+	}
+
+	return name, nil
+}
+
+func convertToUTF8(data []byte, encodingName string) ([]byte, error) {
+	enc, canonicalName := charset.Lookup(encodingName)
+	if enc == nil {
+		return nil, fmt.Errorf("encoding not found: %s", encodingName)
+	}
+
+	decoder := enc.NewDecoder()
+
+	converted, err := decoder.Bytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode from %s to UTF-8: %s",
+			canonicalName, err)
+	}
+
+	return converted, nil
+}
+
+// Strip out invalid code points.
+//
+// Certain code points are not valid in XML 1.0. See:
+// https://www.w3.org/TR/2006/REC-xml-20060816/#charsets
+//
+// data must be UTF-8.
+func cleanXMLv1(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+
+	// Iterate over code points. r is a rune.
+	for _, r := range string(data) {
+		// Invalid UTF-8 sequence. 0xfffd is the Unicode replacement character.
+		if r == 0xfffd {
+			continue
+		}
+
+		write := false
+
+		if r == '\x09' || r == '\x0a' || r == '\x0d' {
+			write = true
+		} else if r >= '\x20' && r <= '\ud7ff' {
+			write = true
+		} else if r >= '\ue000' && r <= '\ufffd' {
+			write = true
+		} else if r >= '\U00010000' && r <= '\U0010ffff' {
+			write = true
+		}
+
+		if !write {
+			if config.Verbose {
+				buf := make([]byte, 4)
+				_ = utf8.EncodeRune(buf, r)
+				log.Printf("Skipping rune: %x", buf)
+			}
+			continue
+		}
+
+		n, err := b.WriteRune(r)
+		if err != nil {
+			return nil, fmt.Errorf("unable to save rune: %s", err)
+		}
+
+		if n != utf8.RuneLen(r) {
+			return nil, fmt.Errorf("short write when writing rune: wrote %d, wanted %d",
+				n, utf8.RuneLen(r))
+		}
+	}
+
+	return b.Bytes(), nil
+}
+
+// Strip the XML header/prolog, and replace it with one claiming UTF-8.
+//
+// This is because might have changed the encoding.
+func updateXMLv1HeaderToUTF8(data []byte) ([]byte, error) {
+	newHeader := []byte(`<?xml version="1.0" encoding="UTF-8"?>`)
+
+	// Find where the header ends.
+	endPos := bytes.Index(data, []byte{'?', '>'})
+	if endPos == -1 {
+		return nil, fmt.Errorf("could not find end of XML header")
+	}
+
+	// Skip after ?>
+	endPos += 2
+
+	if endPos >= len(data) {
+		return nil, fmt.Errorf("document ends with XML header")
+	}
+
+	newData := []byte{}
+	newData = append(newData, newHeader...)
+	newData = append(newData, data[endPos:]...)
+
+	return newData, nil
 }
 
 // parseAsRSS attempts to parse the buffer as if it contains an RSS feed.
 func parseAsRSS(data []byte) (*Feed, error) {
-	// Decode from XML.
-
-	// To see how Unmarshal() works, refer to the documentation. Basically we
-	// have to tag the struct fields in the special format as in the package
-	// structs.
 	rssXML := rssXML{}
-
-	// We can use xml.Unmarshal() except in cases where we need to convert between
-	// charsets. Which we want to be able to do, so we do not use Unmarshal().
-	//
-	// For example if we have:
-	// <?xml version="1.0" encoding="ISO-8859-1"?>
-	//
-	// Then we have to create an xml.Decoder and provide it a CharsetReader
-	// function. See
-	// http://stackoverflow.com/questions/6002619/unmarshal-an-iso-8859-1-xml-input-in-go
-
-	// Decoder wants an io.Reader.
-	byteReader := bytes.NewBuffer(data)
-
-	decoder := xml.NewDecoder(byteReader)
-
-	decoder.CharsetReader = charset.NewReaderLabel
-
-	err := decoder.Decode(&rssXML)
-	if err != nil {
+	if err := xml.Unmarshal(data, &rssXML); err != nil {
 		return nil, fmt.Errorf("RSS XML decode error: %v", err)
 	}
 
@@ -200,6 +355,7 @@ func parseAsRSS(data []byte) (*Feed, error) {
 		Link:        rssXML.Channel.Link,
 		Description: rssXML.Channel.Description,
 		PubDate:     parseTime(rssXML.Channel.PubDate),
+		Type:        "RSS",
 	}
 
 	if config.Verbose {
@@ -224,13 +380,7 @@ func parseAsRSS(data []byte) (*Feed, error) {
 // See parseAsRSS() for a similar function, but for RSS.
 func parseAsRDF(data []byte) (*Feed, error) {
 	rdfXML := rdfXML{}
-
-	byteReader := bytes.NewBuffer(data)
-	decoder := xml.NewDecoder(byteReader)
-	decoder.CharsetReader = charset.NewReaderLabel
-
-	err := decoder.Decode(&rdfXML)
-	if err != nil {
+	if err := xml.Unmarshal(data, &rdfXML); err != nil {
 		return nil, fmt.Errorf("RDF XML decode error: %v", err)
 	}
 
@@ -248,6 +398,7 @@ func parseAsRDF(data []byte) (*Feed, error) {
 		Link:        link,
 		Description: rdfXML.Channel.Description,
 		PubDate:     parseTime(rdfXML.Channel.PubDate),
+		Type:        "RDF",
 	}
 
 	if config.Verbose {
@@ -273,13 +424,7 @@ func parseAsRDF(data []byte) (*Feed, error) {
 // that would be repeated here if they are in those functions.
 func parseAsAtom(data []byte) (*Feed, error) {
 	atomXML := atomXML{}
-
-	byteReader := bytes.NewBuffer(data)
-	decoder := xml.NewDecoder(byteReader)
-	decoder.CharsetReader = charset.NewReaderLabel
-
-	err := decoder.Decode(&atomXML)
-	if err != nil {
+	if err := xml.Unmarshal(data, &atomXML); err != nil {
 		return nil, fmt.Errorf("Atom XML decode error: %v", err)
 	}
 
@@ -297,6 +442,7 @@ func parseAsAtom(data []byte) (*Feed, error) {
 		Title:   atomXML.Title,
 		Link:    link,
 		PubDate: parseTime(atomXML.Updated),
+		Type:    "Atom",
 	}
 
 	if config.Verbose {

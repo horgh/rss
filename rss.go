@@ -11,6 +11,7 @@ type Feed struct {
 	Description string
 	PubDate     time.Time
 	Items       []Item
+	Type        string
 }
 
 // Item contains information about an item/entry in a feed.
