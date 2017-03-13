@@ -137,7 +137,8 @@ func ParseFeedXML(data []byte) (*Feed, error) {
 		return channelAtom, nil
 	}
 
-	return nil, fmt.Errorf("unable to parse as RSS, RDF, or Atom")
+	return nil, fmt.Errorf("unable to parse as RSS (%s), RDF (%s), or Atom (%s)",
+		errRSS, errRDF, errAtom)
 }
 
 // looksLikeXML applies some simple checks to know if we have an XML document.
