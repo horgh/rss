@@ -479,6 +479,8 @@ func parseTime(pubDate string) time.Time {
 		return time.Now()
 	}
 
+	pubDate = strings.TrimSpace(pubDate)
+
 	// Use RFC1123 time format for parsing. This appears to be what is present in
 	// the Slashdot feed, though I expect this could vary in other feed
 	// sources...
