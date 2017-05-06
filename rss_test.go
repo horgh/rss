@@ -373,48 +373,58 @@ func TestGetEncodingName(t *testing.T) {
 		{
 			input:     []byte(`<?xml version=`),
 			output:    "",
-			wantError: fmt.Errorf("buffer is too short to have an XML header"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			// Note 'xersion' instead of 'version'
 			input:     []byte(`<?xml xersion="1.0" encoding="UTF-8"?>`),
 			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0"`),
 			output:    "",
-			wantError: fmt.Errorf("buffer is too short to have an XML header"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding=UTF-8`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found, no start quote"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding=`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found, end of buffer before start quote"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding= ?>`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found, no start quote"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding="UTF-8' ?>`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found, no end quote"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding="UTF-8 ?>`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found, no end quote"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
 		},
 		{
 			input:     []byte(`<?xml version="1.0" encoding="" ?>`),
 			output:    "",
-			wantError: fmt.Errorf("no encoding found"),
+			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
+		},
+		{
+			input:     []byte(`<?xml version="1.0"?>`),
+			output:    "UTF-8",
+			wantError: nil,
+		},
+		{
+			input:     []byte(`<?xml version="1.0" ?>`),
+			output:    "UTF-8",
+			wantError: nil,
 		},
 	}
 

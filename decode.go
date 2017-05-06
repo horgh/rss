@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -185,62 +186,52 @@ func decodeToUTF8AndClean(data []byte) ([]byte, error) {
 	return cleanWithNewHeader, nil
 }
 
-// Examing the XML header (prolog) for the encoding name.
+// Examine the XML header (prolog) to determine the encoding.
 //
-// Including the encoding declaration is optional (in fact, the whole prolog
-// is). But if present, it must be after the version info. It may be quoted
+// Including the encoding is optional (in fact, everything in the prolog is).
+//
+// Grammar:
+//
+// prolog = XMLDecl? Misc* (doctypedecl Misc*)?
+// XMLDecl = '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
+//
+// This means if we have a prolog with an XML declaration then a version must be
+// present.
+//
+// The encoding name, if present, must be after the version. It may be quoted
 // with single or double quotes.
 //
-// I choose to require both the header and that there be an encoding specified.
+// I choose to require a prolog.
+//
+// If no encoding is specified, I default to UTF-8. This is within spec unless
+// we were told a different encoding in another way, such as through HTTP
+// headers, which I don't currently take into account.
 func getEncodingName(data []byte) (string, error) {
-	prefix := `<?xml version="1.0" encoding=`
+	re := regexp.MustCompile(
+		`<\?xml\s+version=(?:"1\.0"|'1\.0')(?:\s+encoding=("\S+?"|'\S+?'))?(?:\s+standalone=(?:"yes"|'yes'|"no"|'no'))?\s*\?>`)
 
-	if len(data) < len(prefix) {
-		return "", fmt.Errorf("buffer is too short to have an XML header")
+	matches := re.FindSubmatch(data)
+	if matches == nil {
+		return "", fmt.Errorf("buffer does not have XML header, or header is malformed")
 	}
 
-	i := 0
-	for ; i < len(prefix); i++ {
-		if data[i] != prefix[i] {
-			return "", fmt.Errorf("buffer does not have XML header")
-		}
+	if len(matches) != 2 {
+		return "", fmt.Errorf("unexpected number of matches")
 	}
 
-	// We should be at a quote character now.
-
-	if i >= len(data) {
-		return "", fmt.Errorf("no encoding found, end of buffer before start quote")
+	// No encoding attribute.
+	if matches[1] == nil {
+		return "UTF-8", nil
 	}
 
-	if data[i] != '\'' && data[i] != '"' {
-		return "", fmt.Errorf("no encoding found, no start quote")
-	}
+	encoding := bytes.Trim(matches[1], `"'`)
 
-	quoteChar := data[i]
-	i++
-
-	name := ""
-	foundEndQuote := false
-	for ; i < len(data); i++ {
-		if data[i] == quoteChar {
-			foundEndQuote = true
-			break
-		}
-
-		// We could enforce which characters we accept here.
-
-		name += string(data[i])
-	}
-
-	if !foundEndQuote {
-		return "", fmt.Errorf("no encoding found, no end quote")
-	}
-
-	if len(name) == 0 {
+	// Empty encoding attribute.
+	if len(encoding) == 0 {
 		return "", fmt.Errorf("no encoding found")
 	}
 
-	return name, nil
+	return string(encoding), nil
 }
 
 func convertToUTF8(data []byte, encodingName string) ([]byte, error) {
