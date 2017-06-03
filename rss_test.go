@@ -178,6 +178,7 @@ func TestParseAsAtom(t *testing.T) {
 						Description: "<p>Testing content 1</p>",
 						PubDate: time.Date(2017, 1, 11, 0, 0, 0, 0,
 							time.FixedZone("TZ", -5*60*60)),
+						GUID: "http://www.example.com/test-entry-1-id",
 					},
 					Item{
 						Title:       "Test title 2",
@@ -185,6 +186,7 @@ func TestParseAsAtom(t *testing.T) {
 						Description: "<p>Testing content 2</p>",
 						PubDate: time.Date(2017, 1, 12, 0, 0, 0, 0,
 							time.FixedZone("TZ", -5*60*60)),
+						GUID: "http://www.example.com/test-entry-2-id",
 					},
 				},
 				Type: "Atom",

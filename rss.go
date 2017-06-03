@@ -20,6 +20,7 @@ type Item struct {
 	Link        string
 	Description string
 	PubDate     time.Time
+	GUID        string
 }
 
 // Config controls package wide settings.

@@ -41,6 +41,8 @@ type rssItemXML struct {
 	Link        string   `xml:"link"`
 	Description string   `xml:"description"`
 	PubDate     string   `xml:"pubDate"`
+	// GUID is optional. Unique identifier.
+	GUID string `xml:"guid"`
 }
 
 // rdfXML is used for parsing RDF.
@@ -69,6 +71,8 @@ type rdfItemXML struct {
 	Link        string   `xml:"link"`
 	Description string   `xml:"description"`
 	PubDate     string   `xml:"date"`
+	// RDF doesn't have a unique identifier like guid/id? Or maybe it does, but
+	// the only feed I have using RDF doesn't use it, so I'm not looking too hard!
 }
 
 // atomXML describes an Atom feed. We use it for parsing. See
@@ -109,6 +113,9 @@ type atomItemXML struct {
 
 	// Content is optional.
 	Content string `xml:"content"`
+
+	// ID is required. Unique identifier.
+	ID string `xml:"id"`
 }
 
 // ParseFeedXML takes a feed's raw XML and returns a struct describing the feed.
@@ -360,6 +367,7 @@ func parseAsRSS(data []byte) (*Feed, error) {
 				Link:        item.Link,
 				Description: item.Description,
 				PubDate:     parseTime(item.PubDate),
+				GUID:        item.GUID,
 			})
 	}
 
@@ -452,6 +460,7 @@ func parseAsAtom(data []byte) (*Feed, error) {
 			Link:        link,
 			Description: item.Content,
 			PubDate:     parseTime(item.Updated),
+			GUID:        item.ID,
 		})
 	}
 
