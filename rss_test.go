@@ -584,6 +584,51 @@ func TestUpdateXMLv1HeaderToUTF8(t *testing.T) {
 	}
 }
 
+func TestParseTime(t *testing.T) {
+	tests := []struct {
+		TimeString string
+		Time       time.Time
+	}{
+		{
+			"Wednesday, October 28, 2015, 15:24 -0700",
+			time.Date(2015, time.October, 28, 22, 24, 0, 0, time.UTC),
+		},
+		{
+			"Sat, May 7 2011 12:56:00 +0000",
+			time.Date(2011, time.May, 7, 12, 56, 0, 0, time.UTC),
+		},
+		{
+			"Sun, 09 Apr 2017 05:06 GMT",
+			time.Date(2017, time.April, 9, 5, 6, 0, 0, time.UTC),
+		},
+		{
+			"Tuesday, August 14, 2012 20:45 +0000",
+			time.Date(2012, time.August, 14, 20, 45, 0, 0, time.UTC),
+		},
+		{
+			"Monday, September 5 2011 13:54:00 +0000",
+			time.Date(2011, time.September, 5, 13, 54, 0, 0, time.UTC),
+		},
+		{
+			"Wed, July 18 2011 09:59:00 +0000",
+			time.Date(2011, time.July, 18, 9, 59, 0, 0, time.UTC),
+		},
+	}
+
+	config.Verbose = true
+
+	for _, test := range tests {
+		gotTime := parseTime(test.TimeString)
+
+		gotTimeUTC := gotTime.UTC()
+
+		if !gotTimeUTC.Equal(test.Time) {
+			t.Errorf("parseTime(%s) = %s, wanted %s", test.TimeString, gotTimeUTC,
+				test.Time)
+		}
+	}
+}
+
 func errorsEqual(e0, e1 error) bool {
 	if e0 == nil && e1 == nil {
 		return true

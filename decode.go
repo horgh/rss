@@ -474,7 +474,7 @@ func parseAsAtom(data []byte) (*Feed, error) {
 func parseTime(pubDate string) time.Time {
 	if len(pubDate) == 0 {
 		if config.Verbose {
-			log.Print("No pub date given - using default.")
+			log.Print("No publication date on channel/item. Defaulting to now.")
 		}
 		return time.Now()
 	}
@@ -513,9 +513,49 @@ func parseTime(pubDate string) time.Time {
 		return pubDateTimeParsed
 	}
 
-	if config.Verbose {
-		log.Printf("No format worked for date [%s] - using default - NOW", pubDate)
+	// commandlinefanatic.com: Wednesday, October 28, 2015, 15:24 -0700
+	layout0 := "Monday, January _2, 2006, 15:04 -0700"
+	pubDateTimeParsed, err = time.Parse(layout0, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
 	}
+
+	// commandlinefanatic.com: Sat, May 7 2011 12:56:00 +0000
+	layout1 := "Mon, Jan 2 2006 15:04:05 -0700"
+	pubDateTimeParsed, err = time.Parse(layout1, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
+	}
+
+	// commandlinefanatic.com: Tuesday, August 14, 2012 20:45 +0000
+	layout2 := "Monday, January _2, 2006 15:04 -0700"
+	pubDateTimeParsed, err = time.Parse(layout2, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
+	}
+
+	// commandlinefanatic.com: Monday, September 5 2011 13:54:00 +0000
+	layout3 := "Monday, January _2 2006 15:04:05 -0700"
+	pubDateTimeParsed, err = time.Parse(layout3, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
+	}
+
+	// commandlinefanatic.com: Wed, July 18 2011 09:59:00 +0000
+	layout4 := "Mon, January _2 2006 15:04:05 -0700"
+	pubDateTimeParsed, err = time.Parse(layout4, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
+	}
+
+	// yarchive.net: Sun, 09 Apr 2017 05:06 GMT
+	yarchive := "Mon, _2 Jan 2006 15:04 MST"
+	pubDateTimeParsed, err = time.Parse(yarchive, pubDate)
+	if err == nil {
+		return pubDateTimeParsed
+	}
+
+	log.Printf("No format worked for date [%s]. Defaulting to now.", pubDate)
 
 	return time.Now()
 }
