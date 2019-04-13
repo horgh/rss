@@ -317,44 +317,7 @@ func parseTime(pubDate string) time.Time {
 	}
 
 	// Slashdot RDF format: 2015-03-03T21:29:00+00:00
-	//
-	// NOTE: RFC3339 is not exactly this it seems?
 	pubDateTimeParsed, err = time.Parse(time.RFC3339, pubDate)
-	if err == nil {
-		return pubDateTimeParsed
-	}
-
-	// commandlinefanatic.com: Wednesday, October 28, 2015, 15:24 -0700
-	layout0 := "Monday, January _2, 2006, 15:04 -0700"
-	pubDateTimeParsed, err = time.Parse(layout0, pubDate)
-	if err == nil {
-		return pubDateTimeParsed
-	}
-
-	// commandlinefanatic.com: Sat, May 7 2011 12:56:00 +0000
-	layout1 := "Mon, Jan 2 2006 15:04:05 -0700"
-	pubDateTimeParsed, err = time.Parse(layout1, pubDate)
-	if err == nil {
-		return pubDateTimeParsed
-	}
-
-	// commandlinefanatic.com: Tuesday, August 14, 2012 20:45 +0000
-	layout2 := "Monday, January _2, 2006 15:04 -0700"
-	pubDateTimeParsed, err = time.Parse(layout2, pubDate)
-	if err == nil {
-		return pubDateTimeParsed
-	}
-
-	// commandlinefanatic.com: Monday, September 5 2011 13:54:00 +0000
-	layout3 := "Monday, January _2 2006 15:04:05 -0700"
-	pubDateTimeParsed, err = time.Parse(layout3, pubDate)
-	if err == nil {
-		return pubDateTimeParsed
-	}
-
-	// commandlinefanatic.com: Wed, July 18 2011 09:59:00 +0000
-	layout4 := "Mon, January _2 2006 15:04:05 -0700"
-	pubDateTimeParsed, err = time.Parse(layout4, pubDate)
 	if err == nil {
 		return pubDateTimeParsed
 	}
