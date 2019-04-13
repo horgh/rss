@@ -123,22 +123,22 @@ type atomItemXML struct {
 // We support various formats: RSS, RDF, Atom. We try our best to decode the
 // feed in one of them.
 func ParseFeedXML(data []byte) (*Feed, error) {
-	utf8Data, err := decodeToUTF8AndClean(data)
+	data, err := decodeAndClean(data)
 	if err != nil {
 		return nil, err
 	}
 
-	channelRSS, errRSS := parseAsRSS(utf8Data)
+	channelRSS, errRSS := parseAsRSS(data)
 	if errRSS == nil {
 		return channelRSS, nil
 	}
 
-	channelRDF, errRDF := parseAsRDF(utf8Data)
+	channelRDF, errRDF := parseAsRDF(data)
 	if errRDF == nil {
 		return channelRDF, nil
 	}
 
-	channelAtom, errAtom := parseAsAtom(utf8Data)
+	channelAtom, errAtom := parseAsAtom(data)
 	if errAtom == nil {
 		return channelAtom, nil
 	}
@@ -147,19 +147,9 @@ func ParseFeedXML(data []byte) (*Feed, error) {
 		errRSS, errRDF, errAtom)
 }
 
-// Take raw XML data, and convert it to UTF8 if necessary. Then remove all code
-// points that are not valid for XML.
-//
-// See the XML 1.0 specification for which are valid:
-// https://www.w3.org/TR/2006/REC-xml-20060816/#charsets
-//
-// Note that versions other than 1.0 have differences. However we currently
-// only support 1.0.
-//
-// Why do I remove such code points? I've come across XML in the wild with
-// them. Specifically I encountered U+000B (0x0b). The XML decoder rejects XML
-// with such code points as invalid.
-func decodeToUTF8AndClean(data []byte) ([]byte, error) {
+// Take raw XML data, and transcode it to UTF8 if necessary. Try to clean up
+// malformed input.
+func decodeAndClean(data []byte) ([]byte, error) {
 	// Find the encoding from the XML header.
 	encodingName, err := getEncodingName(data)
 	if err != nil {
@@ -262,6 +252,10 @@ func convertToUTF8(data []byte, encodingName string) ([]byte, error) {
 //
 // Certain code points are not valid in XML 1.0. See:
 // https://www.w3.org/TR/2006/REC-xml-20060816/#charsets
+//
+// Why do I remove such code points? I've come across XML in the wild with
+// them. Specifically I encountered U+000B (0x0b). The XML decoder rejects XML
+// with such code points as invalid.
 //
 // data must be UTF-8.
 func cleanXMLv1(data []byte) ([]byte, error) {
