@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
 )
@@ -123,11 +121,6 @@ type atomItemXML struct {
 // We support various formats: RSS, RDF, Atom. We try our best to decode the
 // feed in one of them.
 func ParseFeedXML(data []byte) (*Feed, error) {
-	data, err := decodeAndClean(data)
-	if err != nil {
-		return nil, err
-	}
-
 	channelRSS, errRSS := parseAsRSS(data)
 	if errRSS == nil {
 		return channelRSS, nil
@@ -147,192 +140,10 @@ func ParseFeedXML(data []byte) (*Feed, error) {
 		errRSS, errRDF, errAtom)
 }
 
-// Take raw XML data, and transcode it to UTF8 if necessary. Try to clean up
-// malformed input.
-func decodeAndClean(data []byte) ([]byte, error) {
-	// Find the encoding from the XML header.
-	encodingName, err := getEncodingName(data)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert the payload to UTF-8.
-	utf8Data, err := convertToUTF8(data, encodingName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Strip out any invalid code points.
-	cleanData, err := cleanXMLv1(utf8Data)
-	if err != nil {
-		return nil, err
-	}
-
-	// If we did not change the encoding, then we're done. If we did, then we
-	// need to replace the XML header to reflect that. Otherwise we'll have
-	// issues when we go to unmarshal, as it will think we need to decode.
-	if strings.ToLower(encodingName) == "UTF-8" {
-		return cleanData, err
-	}
-
-	cleanWithNewHeader, err := updateXMLv1HeaderToUTF8(cleanData)
-	if err != nil {
-		return nil, err
-	}
-
-	return cleanWithNewHeader, nil
-}
-
-// Examine the XML header (prolog) to determine the encoding.
-//
-// Including the encoding is optional (in fact, everything in the prolog is).
-//
-// Grammar:
-//
-// prolog = XMLDecl? Misc* (doctypedecl Misc*)?
-// XMLDecl = '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
-//
-// This means if we have a prolog with an XML declaration then a version must be
-// present.
-//
-// The encoding name, if present, must be after the version. It may be quoted
-// with single or double quotes.
-//
-// I choose to require a prolog.
-//
-// If no encoding is specified, I default to UTF-8. This is within spec unless
-// we were told a different encoding in another way, such as through HTTP
-// headers, which I don't currently take into account.
-func getEncodingName(data []byte) (string, error) {
-	re := regexp.MustCompile(
-		`<\?xml\s+version=(?:"1\.0"|'1\.0')(?:\s+encoding=("\S+?"|'\S+?'))?(?:\s+standalone=(?:"yes"|'yes'|"no"|'no'))?\s*\?>`)
-
-	matches := re.FindSubmatch(data)
-	if matches == nil {
-		return "", fmt.Errorf("buffer does not have XML header, or header is malformed")
-	}
-
-	if len(matches) != 2 {
-		return "", fmt.Errorf("unexpected number of matches")
-	}
-
-	// No encoding attribute.
-	if matches[1] == nil {
-		return "UTF-8", nil
-	}
-
-	encoding := bytes.Trim(matches[1], `"'`)
-
-	// Empty encoding attribute.
-	if len(encoding) == 0 {
-		return "", fmt.Errorf("no encoding found")
-	}
-
-	return string(encoding), nil
-}
-
-func convertToUTF8(data []byte, encodingName string) ([]byte, error) {
-	enc, canonicalName := charset.Lookup(encodingName)
-	if enc == nil {
-		return nil, fmt.Errorf("encoding not found: %s", encodingName)
-	}
-
-	decoder := enc.NewDecoder()
-
-	converted, err := decoder.Bytes(data)
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode from %s to UTF-8: %s",
-			canonicalName, err)
-	}
-
-	return converted, nil
-}
-
-// Strip out invalid code points.
-//
-// Certain code points are not valid in XML 1.0. See:
-// https://www.w3.org/TR/2006/REC-xml-20060816/#charsets
-//
-// Why do I remove such code points? I've come across XML in the wild with
-// them. Specifically I encountered U+000B (0x0b). The XML decoder rejects XML
-// with such code points as invalid.
-//
-// data must be UTF-8.
-func cleanXMLv1(data []byte) ([]byte, error) {
-	var b bytes.Buffer
-
-	// Iterate over code points. r is a rune.
-	for _, r := range string(data) {
-		// Invalid UTF-8 sequence. 0xfffd is the Unicode replacement character.
-		if r == 0xfffd {
-			continue
-		}
-
-		write := false
-
-		if r == '\x09' || r == '\x0a' || r == '\x0d' {
-			write = true
-		} else if r >= '\x20' && r <= '\ud7ff' {
-			write = true
-		} else if r >= '\ue000' && r <= '\ufffd' {
-			write = true
-		} else if r >= '\U00010000' && r <= '\U0010ffff' {
-			write = true
-		}
-
-		if !write {
-			if config.Verbose {
-				buf := make([]byte, 4)
-				_ = utf8.EncodeRune(buf, r)
-				log.Printf("Skipping rune: %x", buf)
-			}
-			continue
-		}
-
-		n, err := b.WriteRune(r)
-		if err != nil {
-			return nil, fmt.Errorf("unable to save rune: %s", err)
-		}
-
-		if n != utf8.RuneLen(r) {
-			return nil, fmt.Errorf("short write when writing rune: wrote %d, wanted %d",
-				n, utf8.RuneLen(r))
-		}
-	}
-
-	return b.Bytes(), nil
-}
-
-// Strip the XML header/prolog, and replace it with one claiming UTF-8.
-//
-// This is because we might have changed the encoding.
-func updateXMLv1HeaderToUTF8(data []byte) ([]byte, error) {
-	newHeader := []byte(`<?xml version="1.0" encoding="UTF-8"?>`)
-
-	// Find where the header ends.
-	endPos := bytes.Index(data, []byte{'?', '>'})
-	if endPos == -1 {
-		return nil, fmt.Errorf("could not find end of XML header")
-	}
-
-	// Skip after ?>
-	endPos += 2
-
-	if endPos >= len(data) {
-		return nil, fmt.Errorf("document ends with XML header")
-	}
-
-	newData := []byte{}
-	newData = append(newData, newHeader...)
-	newData = append(newData, data[endPos:]...)
-
-	return newData, nil
-}
-
 // parseAsRSS attempts to parse the buffer as if it contains an RSS feed.
 func parseAsRSS(data []byte) (*Feed, error) {
 	rssXML := rssXML{}
-	if err := xml.Unmarshal(data, &rssXML); err != nil {
+	if err := newDecoder(data).Decode(&rssXML); err != nil {
 		return nil, fmt.Errorf("RSS XML decode error: %v", err)
 	}
 
@@ -368,12 +179,18 @@ func parseAsRSS(data []byte) (*Feed, error) {
 	return feed, nil
 }
 
+func newDecoder(data []byte) *xml.Decoder {
+	d := xml.NewDecoder(bytes.NewBuffer(data))
+	d.CharsetReader = charset.NewReaderLabel
+	return d
+}
+
 // parseAsRDF attempts to parse the buffer as if it contains an RDF feed.
 //
 // See parseAsRSS() for a similar function, but for RSS.
 func parseAsRDF(data []byte) (*Feed, error) {
 	rdfXML := rdfXML{}
-	if err := xml.Unmarshal(data, &rdfXML); err != nil {
+	if err := newDecoder(data).Decode(&rdfXML); err != nil {
 		return nil, fmt.Errorf("RDF XML decode error: %v", err)
 	}
 
@@ -417,7 +234,7 @@ func parseAsRDF(data []byte) (*Feed, error) {
 // that would be repeated here if they are in those functions.
 func parseAsAtom(data []byte) (*Feed, error) {
 	atomXML := atomXML{}
-	if err := xml.Unmarshal(data, &atomXML); err != nil {
+	if err := newDecoder(data).Decode(&atomXML); err != nil {
 		return nil, fmt.Errorf("Atom XML decode error: %v", err)
 	}
 

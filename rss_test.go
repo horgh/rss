@@ -81,14 +81,14 @@ func TestParseAsRDF(t *testing.T) {
 				Description: "News for nerds, stuff that matters",
 				PubDate:     time.Date(2017, 1, 17, 21, 30, 14, 0, time.FixedZone("TZ", 0)),
 				Items: []Item{
-					Item{
+					{
 						Title:       "Uber Sues City of Seattle To Block Landmark Driver Union Ordinance",
 						Link:        "https://tech.slashdot.org/story/17/01/17/197230/uber-sues-city-of-seattle-to-block-landmark-driver-union-ordinance?utm_source=rss1.0mainlinkanon&utm_medium=feed",
 						Description: "Seattle's landmark law that lets drivers",
 						PubDate: time.Date(2017, 1, 17, 20, 40, 0, 0,
 							time.FixedZone("TZ", 0)),
 					},
-					Item{
+					{
 						Title:       "Netflix is 'Killing' DVD Sales, Research Finds",
 						Link:        "https://entertainment.slashdot.org/story/17/01/17/1855219/netflix-is-killing-dvd-sales-research-finds?utm_source=rss1.0mainlinkanon&utm_medium=feed",
 						Description: "Netflix has become the go-to destination for many movie",
@@ -172,7 +172,7 @@ func TestParseAsAtom(t *testing.T) {
 				PubDate: time.Date(2017, 1, 11, 20, 30, 23, 0,
 					time.FixedZone("TZ", -5*60*60)),
 				Items: []Item{
-					Item{
+					{
 						Title:       "Test title 1",
 						Link:        "http://www.example.com/test-entry-1",
 						Description: "<p>Testing content 1</p>",
@@ -180,7 +180,7 @@ func TestParseAsAtom(t *testing.T) {
 							time.FixedZone("TZ", -5*60*60)),
 						GUID: "http://www.example.com/test-entry-1-id",
 					},
-					Item{
+					{
 						Title:       "Test title 2",
 						Link:        "http://www.example.com/test-entry-2",
 						Description: "<p>Testing content 2</p>",
@@ -284,14 +284,14 @@ func TestMakeXML(t *testing.T) {
 				PubDate: time.Date(2016, 12, 25, 11, 0, 0, 0,
 					time.FixedZone("TZ", 0)),
 				Items: []Item{
-					Item{
+					{
 						Title:       "Nice item 1",
 						Link:        "https://www.example.com/1",
 						Description: "Item 1 is very nice",
 						PubDate: time.Date(2016, 12, 25, 11, 01, 0, 0,
 							time.FixedZone("TZ", 0)),
 					},
-					Item{
+					{
 						Title:       "Nice item 2",
 						Link:        "https://www.example.com/2",
 						Description: "Item 2 is very nice",
@@ -346,239 +346,6 @@ func TestMakeXML(t *testing.T) {
 
 		if !bytes.Equal(buf, []byte(test.output)) {
 			t.Errorf("makeXML(%#v) = %s, wanted %s", test.input, buf, test.output)
-			continue
-		}
-	}
-}
-
-func TestGetEncodingName(t *testing.T) {
-	tests := []struct {
-		input     []byte
-		output    string
-		wantError error
-	}{
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8" ?>`),
-			output:    "UTF-8",
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding='UTF-8' ?>`),
-			output:    "UTF-8",
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
-			output:    "UTF-8",
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version=`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			// Note 'xersion' instead of 'version'
-			input:     []byte(`<?xml xersion="1.0" encoding="UTF-8"?>`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0"`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding=UTF-8`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding=`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding= ?>`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8' ?>`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8 ?>`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="" ?>`),
-			output:    "",
-			wantError: fmt.Errorf("buffer does not have XML header, or header is malformed"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0"?>`),
-			output:    "UTF-8",
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" ?>`),
-			output:    "UTF-8",
-			wantError: nil,
-		},
-	}
-
-	for _, test := range tests {
-		name, err := getEncodingName(test.input)
-
-		if !errorsEqual(err, test.wantError) {
-			t.Errorf("getEncodingName(%s) error = %s, wanted %s", test.input,
-				err, test.wantError)
-			continue
-		}
-
-		if name != test.output {
-			t.Errorf("getEncodingName(%s) name = %s, wanted %s", test.input, name,
-				test.output)
-			continue
-		}
-	}
-}
-
-func TestConvertToUTF8(t *testing.T) {
-	tests := []struct {
-		input         []byte
-		encodingLabel string
-		output        []byte
-		wantError     error
-	}{
-		{
-			input:         []byte(`<?xml version="1.0" encoding="UTF-8" ?> 😀`),
-			encodingLabel: "UTF-8",
-			output:        []byte(`<?xml version="1.0" encoding="UTF-8" ?> 😀`),
-			wantError:     nil,
-		},
-		{
-			input:         []byte(`<?xml version="1.0" encoding="ISO-8859-1" ?> :)`),
-			encodingLabel: "ISO-8859-1",
-			output:        []byte(`<?xml version="1.0" encoding="ISO-8859-1" ?> :)`),
-			wantError:     nil,
-		},
-	}
-
-	for _, test := range tests {
-		converted, err := convertToUTF8(test.input, test.encodingLabel)
-
-		if !errorsEqual(err, test.wantError) {
-			t.Errorf("convertToUTF8(%s, %s) error = %s, wanted %s", test.input,
-				test.encodingLabel, err, test.wantError)
-			continue
-		}
-
-		if !byteSlicesEqual(converted, test.output) {
-			t.Errorf("convertToUTF8(%s, %s) = %s, wanted %s", test.input,
-				test.encodingLabel, converted, test.output)
-			continue
-		}
-	}
-}
-
-func TestCleanXMLv1(t *testing.T) {
-	tests := []struct {
-		input     []byte
-		output    []byte
-		wantError error
-	}{
-		{
-			input:     []byte(`abc`),
-			output:    []byte(`abc`),
-			wantError: nil,
-		},
-		{
-			input:     []byte{'a', 'b', 'c', 0x0b},
-			output:    []byte(`abc`),
-			wantError: nil,
-		},
-		{
-			input:     []byte{'a', 0x0b, 'b', 0x0a, 'c', 0x0b},
-			output:    []byte{'a', 'b', 0x0a, 'c'},
-			wantError: nil,
-		},
-		{
-			input:     []byte("😀"),
-			output:    []byte("😀"),
-			wantError: nil,
-		},
-	}
-
-	config.Verbose = true
-
-	for _, test := range tests {
-		output, err := cleanXMLv1(test.input)
-
-		if !errorsEqual(err, test.wantError) {
-			t.Errorf("cleanXMLv1(%s) = error %s, wanted %s", test.input, err,
-				test.wantError)
-			continue
-		}
-
-		if !byteSlicesEqual(output, test.output) {
-			t.Errorf("cleanXMLv1(%s) = %s, wanted %s", test.input, output,
-				test.output)
-			continue
-		}
-	}
-
-	config.Verbose = false
-}
-
-func TestUpdateXMLv1HeaderToUTF8(t *testing.T) {
-	tests := []struct {
-		input     []byte
-		output    []byte
-		wantError error
-	}{
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8"?>h`),
-			output:    []byte(`<?xml version="1.0" encoding="UTF-8"?>h`),
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
-			output:    nil,
-			wantError: fmt.Errorf("document ends with XML header"),
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="ISO-8859-1"?>h`),
-			output:    []byte(`<?xml version="1.0" encoding="UTF-8"?>h`),
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="ISO-8859-1" ?>h`),
-			output:    []byte(`<?xml version="1.0" encoding="UTF-8"?>h`),
-			wantError: nil,
-		},
-		{
-			input:     []byte(`<?xml version="1.0" encoding="ISO-8859-1" h`),
-			output:    nil,
-			wantError: fmt.Errorf("could not find end of XML header"),
-		},
-	}
-
-	for _, test := range tests {
-		output, err := updateXMLv1HeaderToUTF8(test.input)
-
-		if !errorsEqual(err, test.wantError) {
-			t.Errorf("updateXMLv1HeaderToUTF8(%s) error = %s, wanted %s", test.input,
-				err, test.wantError)
-			continue
-		}
-
-		if !byteSlicesEqual(output, test.output) {
-			t.Errorf("updateXMLv1HeaderToUTF8(%s) = %s, wanted %s", test.input,
-				output, test.output)
 			continue
 		}
 	}
