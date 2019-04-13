@@ -5,7 +5,73 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestParseAsRSS(t *testing.T) {
+	vancouver, err := time.LoadLocation("America/Vancouver")
+	require.NoError(t, err, "load timezone")
+
+	tests := []struct {
+		name   string
+		input  []byte
+		output *Feed
+	}{
+		{
+			"rss feed with no XML decl",
+			[]byte(
+				`<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Nice title</title>
+    <link>https://blog.example.com/</link>
+    <description>Recent content on example.com</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+		<pubDate>Mon, 08 Apr 2019 10:20:30 -0700</pubDate>
+    <lastBuildDate>Mon, 08 Apr 2019 10:20:30 -0700</lastBuildDate>
+    <atom:link href="https://blog.example.com/" rel="self" type="application/rss+xml" />
+
+    <item>
+      <title>My Nice Post</title>
+      <link>https://blog.example.com/post/nice/</link>
+      <pubDate>Mon, 08 Apr 2019 10:20:33 -0700</pubDate>
+
+      <guid>https://blog.example.com/post/nice/</guid>
+      <description>hi</description>
+    </item>
+  </channel>
+</rss>
+`),
+			&Feed{
+				Title:       "Nice title",
+				Link:        "https://blog.example.com/",
+				Description: "Recent content on example.com",
+				PubDate:     time.Date(2019, 4, 8, 10, 20, 30, 0, vancouver),
+				Items: []Item{
+					{
+						Title:       "My Nice Post",
+						Link:        "https://blog.example.com/post/nice/",
+						Description: "hi",
+						PubDate:     time.Date(2019, 4, 8, 10, 20, 33, 0, vancouver),
+						GUID:        "https://blog.example.com/post/nice/",
+					},
+				},
+				Type: "RSS",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			feed, err := ParseFeedXML(test.input)
+			assert.NoError(t, err, "parse feed")
+			err = feedEqual(feed, test.output)
+			assert.NoError(t, err, "correct feed")
+		})
+	}
+}
 
 func TestParseAsRDF(t *testing.T) {
 	tests := []struct {
