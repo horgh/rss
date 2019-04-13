@@ -311,7 +311,7 @@ func cleanXMLv1(data []byte) ([]byte, error) {
 
 // Strip the XML header/prolog, and replace it with one claiming UTF-8.
 //
-// This is because might have changed the encoding.
+// This is because we might have changed the encoding.
 func updateXMLv1HeaderToUTF8(data []byte) ([]byte, error) {
 	newHeader := []byte(`<?xml version="1.0" encoding="UTF-8"?>`)
 
