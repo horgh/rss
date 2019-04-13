@@ -4,6 +4,6 @@ feeds as RSS 2.0.
 
 I use it in an RSS reader, [gorse](https://github.com/horgh/gorse).
 
-It is pretty basic and not overly strict. My use case is to get the minimum
-amount of information about items in feeds, such as titles, URLs, and
+It is basic and not overly strict. My use case is to get the minimum amount
+of information about items in feeds, such as titles, URLs, and
 descriptions.
