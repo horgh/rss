@@ -26,7 +26,7 @@ type rssXML struct {
 type rssChannelXML struct {
 	XMLName     xml.Name     `xml:"channel"`
 	Title       string       `xml:"title"`
-	Link        string       `xml:"link"`
+	Link        string       `xml:"default link"`
 	Description string       `xml:"description"`
 	PubDate     string       `xml:"pubDate"`
 	Items       []rssItemXML `xml:"item"`
@@ -182,6 +182,7 @@ func parseAsRSS(data []byte) (*Feed, error) {
 func newDecoder(data []byte) *xml.Decoder {
 	d := xml.NewDecoder(bytes.NewBuffer(data))
 	d.CharsetReader = charset.NewReaderLabel
+	d.DefaultSpace = "default"
 	return d
 }
 
