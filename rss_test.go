@@ -67,8 +67,8 @@ func TestParseAsRSS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			feed, err := ParseFeedXML(test.input)
 			assert.NoError(t, err, "parse feed")
-			err = feedEqual(feed, test.output)
-			assert.NoError(t, err, "correct feed")
+
+			assert.Equal(t, test.output, feed, "correct feed")
 		})
 	}
 }
@@ -184,13 +184,7 @@ func TestParseAsRDF(t *testing.T) {
 			continue
 		}
 
-		err = feedEqual(feed, test.output)
-		if err != nil {
-			t.Errorf("parseAsAtom(%s): %s", test.input, err)
-			t.Errorf("Got:    %#v", feed)
-			t.Errorf("Wanted: %#v", test.output)
-			continue
-		}
+		assert.Equal(t, test.output, feed, "correct feed")
 	}
 }
 
@@ -277,63 +271,8 @@ func TestParseAsAtom(t *testing.T) {
 			continue
 		}
 
-		err = feedEqual(feed, test.output)
-		if err != nil {
-			t.Errorf("parseAsAtom(%s): %s", test.input, err)
-			t.Errorf("Got:    %#v", feed)
-			t.Errorf("Wanted: %#v", test.output)
-			continue
-		}
+		assert.Equal(t, test.output, feed, "correct feed")
 	}
-}
-
-func feedEqual(a, b *Feed) error {
-	if a.Title != b.Title {
-		return fmt.Errorf("feed title mismatch")
-	}
-
-	if a.Link != b.Link {
-		return fmt.Errorf("feed link mismatch")
-	}
-
-	if a.Description != b.Description {
-		return fmt.Errorf("feed description mismatch")
-	}
-
-	if !a.PubDate.Equal(b.PubDate) {
-		return fmt.Errorf("feed pubdate mismatch")
-	}
-
-	if len(a.Items) != len(b.Items) {
-		return fmt.Errorf("feed items count mismatch")
-	}
-
-	for i := range a.Items {
-		ai := a.Items[i]
-		bi := b.Items[i]
-
-		if ai.Title != bi.Title {
-			return fmt.Errorf("item %d title mismatch", i)
-		}
-
-		if ai.Link != bi.Link {
-			return fmt.Errorf("item %d link mismatch", i)
-		}
-
-		if ai.Description != bi.Description {
-			return fmt.Errorf("item %d description mismatch", i)
-		}
-
-		if !ai.PubDate.Equal(bi.PubDate) {
-			return fmt.Errorf("item %d pubdate mismatch", i)
-		}
-	}
-
-	if a.Type != b.Type {
-		return fmt.Errorf("feed type mismatch, %s vs. %s", a.Type, b.Type)
-	}
-
-	return nil
 }
 
 func TestMakeXML(t *testing.T) {
@@ -440,49 +379,4 @@ func TestParseTime(t *testing.T) {
 				test.Time)
 		}
 	}
-}
-
-func errorsEqual(e0, e1 error) bool {
-	if e0 == nil && e1 == nil {
-		return true
-	}
-
-	if e0 == nil && e1 != nil {
-		return false
-	}
-
-	if e0 != nil && e1 == nil {
-		return false
-	}
-
-	s0 := fmt.Sprintf("%s", e0)
-	s1 := fmt.Sprintf("%s", e1)
-
-	return s0 == s1
-}
-
-func byteSlicesEqual(b0, b1 []byte) bool {
-	if b0 == nil && b1 == nil {
-		return true
-	}
-
-	if b0 == nil && b1 != nil {
-		return false
-	}
-
-	if b0 != nil && b1 == nil {
-		return false
-	}
-
-	if len(b0) != len(b1) {
-		return false
-	}
-
-	for i := range b0 {
-		if b0[i] != b1[i] {
-			return false
-		}
-	}
-
-	return true
 }
