@@ -279,16 +279,12 @@ func parseAsAtom(data []byte) (*Feed, error) {
 	return feed, nil
 }
 
-// parseTime tries to retrieve a publication date for the item.
-//
-// We try parsing using multiple formats, and fall back to a default of the
-// current time if none succeed.
 func parseTime(pubDate string) time.Time {
 	if len(pubDate) == 0 {
 		if config.Verbose {
 			log.Print("No publication date on channel/item. Defaulting to now.")
 		}
-		return time.Now()
+		return time.Time{}
 	}
 
 	pubDate = strings.TrimSpace(pubDate)
@@ -330,7 +326,5 @@ func parseTime(pubDate string) time.Time {
 		return pubDateTimeParsed
 	}
 
-	log.Printf("No format worked for date [%s]. Defaulting to now.", pubDate)
-
-	return time.Now()
+	return time.Time{}
 }
