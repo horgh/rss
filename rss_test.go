@@ -75,12 +75,13 @@ func TestParseAsRSS(t *testing.T) {
 
 func TestParseAsRDF(t *testing.T) {
 	tests := []struct {
+		name    string
 		input   string
 		output  *Feed
 		success bool
 	}{
 		{
-			// An edited/subset version of a feed from Slashdot.
+			"An edited/subset version of a feed from Slashdot.",
 			`<?xml version="1.0" encoding="ISO-8859-1"?>
 <?xml-stylesheet type="text/xsl" media="screen" href="/~d/styles/rss1full.xsl"?><?xml-stylesheet type="text/css" media="screen" href="http://rss.slashdot.org/~d/styles/itemcontent.css"?><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/" xmlns:slash="http://purl.org/rss/1.0/modules/slash/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:taxo="http://purl.org/rss/1.0/modules/taxonomy/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:syn="http://purl.org/rss/1.0/modules/syndication/" xmlns:admin="http://webns.net/mvcb/">
 
@@ -169,32 +170,36 @@ func TestParseAsRDF(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		feed, err := ParseFeedXML([]byte(test.input))
-		if err != nil {
-			if !test.success {
-				continue
+		t.Run(test.name, func(t *testing.T) {
+			feed, err := ParseFeedXML([]byte(test.input))
+			if err != nil {
+				if !test.success {
+					return
+				}
+
+				t.Errorf("parseAsAtom(%s) = error %s, wanted success", test.input, err)
+				return
 			}
 
-			t.Errorf("parseAsAtom(%s) = error %s, wanted success", test.input, err)
-			continue
-		}
+			if !test.success {
+				t.Errorf("parseAsAtom(%s) = success, wanted error", test.input)
+				return
+			}
 
-		if !test.success {
-			t.Errorf("parseAsAtom(%s) = success, wanted error", test.input)
-			continue
-		}
-
-		assert.Equal(t, test.output, feed, "correct feed")
+			assert.Equal(t, test.output, feed, "correct feed")
+		})
 	}
 }
 
 func TestParseAsAtom(t *testing.T) {
 	tests := []struct {
+		name    string
 		input   string
 		output  *Feed
 		success bool
 	}{
 		{
+			"valid feed",
 			`<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
@@ -256,32 +261,36 @@ func TestParseAsAtom(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		feed, err := parseAsAtom([]byte(test.input))
-		if err != nil {
-			if !test.success {
-				continue
+		t.Run(test.name, func(t *testing.T) {
+			feed, err := parseAsAtom([]byte(test.input))
+			if err != nil {
+				if !test.success {
+					return
+				}
+
+				t.Errorf("parseAsAtom(%s) = error %s, wanted success", test.input, err)
+				return
 			}
 
-			t.Errorf("parseAsAtom(%s) = error %s, wanted success", test.input, err)
-			continue
-		}
+			if !test.success {
+				t.Errorf("parseAsAtom(%s) = success, wanted error", test.input)
+				return
+			}
 
-		if !test.success {
-			t.Errorf("parseAsAtom(%s) = success, wanted error", test.input)
-			continue
-		}
-
-		assert.Equal(t, test.output, feed, "correct feed")
+			assert.Equal(t, test.output, feed, "correct feed")
+		})
 	}
 }
 
 func TestMakeXML(t *testing.T) {
 	tests := []struct {
+		name    string
 		input   Feed
 		output  string
 		success bool
 	}{
 		{
+			"success",
 			Feed{
 				Title:       "Test feed",
 				Link:        "https://www.example.com/",
@@ -334,25 +343,27 @@ func TestMakeXML(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		buf, err := makeXML(test.input)
-		if err != nil {
-			if !test.success {
-				continue
+		t.Run(test.name, func(t *testing.T) {
+			buf, err := makeXML(test.input)
+			if err != nil {
+				if !test.success {
+					return
+				}
+
+				t.Errorf("makeXML(%#v) = error %s", test.input, err)
+				return
 			}
 
-			t.Errorf("makeXML(%#v) = error %s", test.input, err)
-			continue
-		}
+			if !test.success {
+				t.Errorf("makeXML(%#v) = success, wanted error", test.input)
+				return
+			}
 
-		if !test.success {
-			t.Errorf("makeXML(%#v) = success, wanted error", test.input)
-			continue
-		}
-
-		if !bytes.Equal(buf, []byte(test.output)) {
-			t.Errorf("makeXML(%#v) = %s, wanted %s", test.input, buf, test.output)
-			continue
-		}
+			if !bytes.Equal(buf, []byte(test.output)) {
+				t.Errorf("makeXML(%#v) = %s, wanted %s", test.input, buf, test.output)
+				return
+			}
+		})
 	}
 }
 
