@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><head/><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>A Nice Site</title>
+	<link>https://example.com</link>
+	<description>A Nice Website</description>
+	<lastBuildDate>Fri, 06 Mar 2020 18:15:47 +0000</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	
+	<item>
+		<title>Nice Title 1</title>
+		<link>https://example.com/2020/03/nice-title-1/</link>
+				<pubDate>Fri, 06 Mar 2020 18:15:47 +0000</pubDate>
+		<dc:creator><![CDATA[Joe Public]]></dc:creator>
+				<category><![CDATA[Blogging]]></category>
+
+		<guid isPermaLink="false">https://example.com/?p=29611</guid>
+      <description><![CDATA[<p>should we write something nice?</p>
+]]></description>
+										</item>
+	</channel>
+</rss>

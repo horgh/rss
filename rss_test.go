@@ -2,7 +2,7 @@ package rss
 
 import (
 	"bytes"
-	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -11,63 +11,72 @@ import (
 )
 
 func TestParseAsRSS(t *testing.T) {
-	vancouver, err := time.LoadLocation("America/Vancouver")
-	require.NoError(t, err, "load timezone")
-
 	tests := []struct {
-		name   string
-		input  []byte
-		output *Feed
+		name    string
+		file    string
+		output  *Feed
+		success bool
 	}{
 		{
-			"rss feed with no XML decl",
-			[]byte(
-				`<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Nice title</title>
-    <link>https://blog.example.com/</link>
-    <description>Recent content on example.com</description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-		<pubDate>Mon, 08 Apr 2019 10:20:30 -0700</pubDate>
-    <lastBuildDate>Mon, 08 Apr 2019 10:20:30 -0700</lastBuildDate>
-    <atom:link href="https://blog.example.com/" rel="self" type="application/rss+xml" />
-
-    <item>
-      <title>My Nice Post</title>
-      <link>https://blog.example.com/post/nice/</link>
-      <pubDate>Mon, 08 Apr 2019 10:20:33 -0700</pubDate>
-
-      <guid>https://blog.example.com/post/nice/</guid>
-      <description>hi</description>
-    </item>
-  </channel>
-</rss>
-`),
-			&Feed{
+			name: "well formed XML feed",
+			file: "test-data/rss-good.xml",
+			output: &Feed{
+				Title:       "A Nice Site",
+				Link:        "https://example.com",
+				Description: "A Nice Website",
+				PubDate:     time.Time{},
+				Items: []Item{
+					{
+						Title:       "Nice Title 1",
+						Link:        "https://example.com/2020/03/nice-title-1/",
+						Description: "<p>should we write something nice?</p>\n",
+						PubDate:     time.Date(2020, 3, 6, 18, 15, 47, 0, time.UTC),
+						GUID:        "https://example.com/?p=29611",
+					},
+				},
+				Type: "RSS",
+			},
+			success: true,
+		},
+		{
+			name: "rss feed with no XML declaration",
+			file: "test-data/rss-with-no-xml-declaration.xml",
+			output: &Feed{
 				Title:       "Nice title",
 				Link:        "https://blog.example.com/",
 				Description: "Recent content on example.com",
-				PubDate:     time.Date(2019, 4, 8, 10, 20, 30, 0, vancouver),
+				PubDate:     time.Date(2019, 4, 8, 10, 20, 30, 0, time.UTC),
 				Items: []Item{
 					{
 						Title:       "My Nice Post",
 						Link:        "https://blog.example.com/post/nice/",
 						Description: "hi",
-						PubDate:     time.Date(2019, 4, 8, 10, 20, 33, 0, vancouver),
+						PubDate:     time.Date(2019, 4, 8, 10, 20, 33, 0, time.UTC),
 						GUID:        "https://blog.example.com/post/nice/",
 					},
 				},
 				Type: "RSS",
 			},
+			success: true,
+		},
+		{
+			name:    "root tag is not rss",
+			file:    "test-data/rss-with-different-root-tag.xml",
+			success: false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			feed, err := ParseFeedXML(test.input)
-			assert.NoError(t, err, "parse feed")
+			buf, err := ioutil.ReadFile(test.file)
+			require.NoError(t, err, "read file")
 
+			feed, err := ParseFeedXML(buf)
+			if !test.success {
+				assert.Error(t, err, "error parsing")
+				return
+			}
+			assert.NoError(t, err, "parse feed")
 			assert.Equal(t, test.output, feed, "correct feed")
 		})
 	}
