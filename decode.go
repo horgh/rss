@@ -295,10 +295,10 @@ func parseTime(pubDate string) time.Time {
 	// sources...
 	//
 	// Slashdot's feed: Sat, 29 Jun 2013 18:20:00 GMT
-	pubDateTimeParsed, err := time.Parse(time.RFC1123, pubDate)
+	pubDateTimeParsed, err := time.ParseInLocation(time.RFC1123, pubDate, time.UTC)
 	// We use the parsed time only if we had no errors parsing it.
 	if err == nil {
-		return pubDateTimeParsed
+		return pubDateTimeParsed.In(time.UTC)
 	}
 
 	// Try another format.
@@ -308,23 +308,23 @@ func parseTime(pubDate string) time.Time {
 	// Sun, 30 Jun 2013 21:26:26 +0000
 	//
 	// Mon, 10 Jun 2013 21:04:57 +0000
-	pubDateTimeParsed, err = time.Parse(time.RFC1123Z, pubDate)
+	pubDateTimeParsed, err = time.ParseInLocation(time.RFC1123Z, pubDate, time.UTC)
 	// We use the parsed time only if we had no errors parsing it.
 	if err == nil {
-		return pubDateTimeParsed
+		return pubDateTimeParsed.In(time.UTC)
 	}
 
 	// Slashdot RDF format: 2015-03-03T21:29:00+00:00
-	pubDateTimeParsed, err = time.Parse(time.RFC3339, pubDate)
+	pubDateTimeParsed, err = time.ParseInLocation(time.RFC3339, pubDate, time.UTC)
 	if err == nil {
-		return pubDateTimeParsed
+		return pubDateTimeParsed.In(time.UTC)
 	}
 
 	// yarchive.net: Sun, 09 Apr 2017 05:06 GMT
 	yarchive := "Mon, _2 Jan 2006 15:04 MST"
-	pubDateTimeParsed, err = time.Parse(yarchive, pubDate)
+	pubDateTimeParsed, err = time.ParseInLocation(yarchive, pubDate, time.UTC)
 	if err == nil {
-		return pubDateTimeParsed
+		return pubDateTimeParsed.In(time.UTC)
 	}
 
 	return time.Time{}

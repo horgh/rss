@@ -146,21 +146,19 @@ func TestParseAsRDF(t *testing.T) {
 				Title:       "Slashdot",
 				Link:        "https://slashdot.org/",
 				Description: "News for nerds, stuff that matters",
-				PubDate:     time.Date(2017, 1, 17, 21, 30, 14, 0, time.FixedZone("TZ", 0)),
+				PubDate:     time.Date(2017, 1, 17, 21, 30, 14, 0, time.UTC),
 				Items: []Item{
 					{
 						Title:       "Uber Sues City of Seattle To Block Landmark Driver Union Ordinance",
 						Link:        "https://tech.slashdot.org/story/17/01/17/197230/uber-sues-city-of-seattle-to-block-landmark-driver-union-ordinance?utm_source=rss1.0mainlinkanon&utm_medium=feed",
 						Description: "Seattle's landmark law that lets drivers",
-						PubDate: time.Date(2017, 1, 17, 20, 40, 0, 0,
-							time.FixedZone("TZ", 0)),
+						PubDate:     time.Date(2017, 1, 17, 20, 40, 0, 0, time.UTC),
 					},
 					{
 						Title:       "Netflix is 'Killing' DVD Sales, Research Finds",
 						Link:        "https://entertainment.slashdot.org/story/17/01/17/1855219/netflix-is-killing-dvd-sales-research-finds?utm_source=rss1.0mainlinkanon&utm_medium=feed",
 						Description: "Netflix has become the go-to destination for many movie",
-						PubDate: time.Date(2017, 1, 17, 20, 0, 0, 0,
-							time.FixedZone("TZ", 0)),
+						PubDate:     time.Date(2017, 1, 17, 20, 0, 0, 0, time.UTC),
 					},
 				},
 				Type: "RDF",
@@ -206,7 +204,7 @@ func TestParseAsAtom(t *testing.T) {
  <title>Test one two</title>
  <link href="http://www.example.com/atom.xml" rel="self"/>
  <link href="http://www.example.com"/>
- <updated>2017-01-11T20:30:23-05:00</updated>
+ <updated>2017-01-11T20:30:23-00:00</updated>
  <id>http://www.example.com-id</id>
  <author>
    <name>John Q. Public</name>
@@ -216,7 +214,7 @@ func TestParseAsAtom(t *testing.T) {
  <entry>
    <title>Test title 1</title>
    <link href="http://www.example.com/test-entry-1"/>
-   <updated>2017-01-11T00:00:00-05:00</updated>
+   <updated>2017-01-11T00:00:00-00:00</updated>
    <id>http://www.example.com/test-entry-1-id</id>
    <content type="html">&lt;p&gt;Testing content 1&lt;/p&gt;</content>
 </entry>
@@ -224,7 +222,7 @@ func TestParseAsAtom(t *testing.T) {
  <entry>
    <title>Test title 2</title>
    <link href="http://www.example.com/test-entry-2"/>
-   <updated>2017-01-12T00:00:00-05:00</updated>
+   <updated>2017-01-12T00:00:00-00:00</updated>
    <id>http://www.example.com/test-entry-2-id</id>
    <content type="html">&lt;p&gt;Testing content 2&lt;/p&gt;</content>
 </entry>
@@ -234,24 +232,21 @@ func TestParseAsAtom(t *testing.T) {
 				Title:       "Test one two",
 				Link:        "http://www.example.com/atom.xml",
 				Description: "",
-				PubDate: time.Date(2017, 1, 11, 20, 30, 23, 0,
-					time.FixedZone("TZ", -5*60*60)),
+				PubDate:     time.Date(2017, 1, 11, 20, 30, 23, 0, time.UTC),
 				Items: []Item{
 					{
 						Title:       "Test title 1",
 						Link:        "http://www.example.com/test-entry-1",
 						Description: "<p>Testing content 1</p>",
-						PubDate: time.Date(2017, 1, 11, 0, 0, 0, 0,
-							time.FixedZone("TZ", -5*60*60)),
-						GUID: "http://www.example.com/test-entry-1-id",
+						PubDate:     time.Date(2017, 1, 11, 0, 0, 0, 0, time.UTC),
+						GUID:        "http://www.example.com/test-entry-1-id",
 					},
 					{
 						Title:       "Test title 2",
 						Link:        "http://www.example.com/test-entry-2",
 						Description: "<p>Testing content 2</p>",
-						PubDate: time.Date(2017, 1, 12, 0, 0, 0, 0,
-							time.FixedZone("TZ", -5*60*60)),
-						GUID: "http://www.example.com/test-entry-2-id",
+						PubDate:     time.Date(2017, 1, 12, 0, 0, 0, 0, time.UTC),
+						GUID:        "http://www.example.com/test-entry-2-id",
 					},
 				},
 				Type: "Atom",
