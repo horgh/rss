@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+ <title>Test one two</title>
+ <link href="http://www.example.com/atom.xml" rel="self"/>
+ <link href="http://www.example.com"/>
+ <updated>2017-01-11T20:30:23-00:00</updated>
+ <id>http://www.example.com-id</id>
+ <author>
+   <name>John Q. Public</name>
+   <email>john@example.com</email>
+ </author>
+
+ <entry>
+   <title>Test title 1</title>
+   <link href="http://www.example.com/test-entry-1"/>
+   <updated>2017-01-11T00:00:00-00:00</updated>
+   <id>http://www.example.com/test-entry-1-id</id>
+   <content type="html">&lt;p&gt;Testing content 1&lt;/p&gt;</content>
+</entry>
+
+ <entry>
+   <title>Test title 2</title>
+   <link href="http://www.example.com/test-entry-2"/>
+   <updated>2017-01-12T00:00:00-00:00</updated>
+   <id>http://www.example.com/test-entry-2-id</id>
+   <content type="html">&lt;p&gt;Testing content 2&lt;/p&gt;</content>
+</entry>
+</feed>
