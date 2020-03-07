@@ -3,11 +3,12 @@ package rss
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"golang.org/x/net/html/charset"
 )
