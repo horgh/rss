@@ -129,13 +129,8 @@ func makeXML(feed Feed) ([]byte, error) {
 
 	// Add the XML header <?xml .. ?>
 	xmlHeader := []byte(xml.Header)
-	for _, v := range xmlHeader {
-		xmlDoc = append(xmlDoc, v)
-	}
-
-	for _, v := range xmlBody {
-		xmlDoc = append(xmlDoc, v)
-	}
+	xmlDoc = append(xmlDoc, xmlHeader...)
+	xmlDoc = append(xmlDoc, xmlBody...)
 
 	return xmlDoc, nil
 }
