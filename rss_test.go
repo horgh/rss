@@ -60,9 +60,29 @@ func TestParseAsRSS(t *testing.T) {
 			success: true,
 		},
 		{
-			name:    "root tag is not rss",
+			name:    "root tag is not rss", // Multiple root tags is invalid XML.
 			file:    "test-data/rss-with-different-root-tag.xml",
 			success: false,
+		},
+		{
+			name: "rss feed with invalid UTF-8",
+			file: "test-data/rss-with-invalid-utf8.xml",
+			output: &Feed{
+				Title:       "Nice title",
+				Link:        "https://example.com",
+				Description: "Nice description",
+				PubDate:     time.Time{},
+				Items: []Item{
+					{
+						Title:       "Post title",
+						Link:        "https://example.com/post-title/",
+						Description: "<p>hi</p>\nFollow us on\u00a0Facebook,\ufffd...\n",
+						PubDate:     time.Date(2020, 3, 9, 17, 25, 18, 0, time.UTC),
+					},
+				},
+				Type: "RSS",
+			},
+			success: true,
 		},
 	}
 
