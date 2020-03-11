@@ -327,5 +327,7 @@ func parseTime(pubDate string) time.Time {
 		return pubDateTimeParsed.In(time.UTC)
 	}
 
+	log.Printf("No format worked for date [%s].", pubDate)
+
 	return time.Time{}
 }
