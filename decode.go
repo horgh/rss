@@ -122,7 +122,19 @@ type atomItemXML struct {
 // We support various formats: RSS, RDF, Atom. We try our best to decode the
 // feed in one of them.
 func ParseFeedXML(data []byte) (*Feed, error) {
-	data = bytes.ToValidUTF8(data, []byte("\uFFFD"))
+	// Hack. Strip invalid UTF-8 before trying to decode. We don't do this in all
+	// cases as we might not have UTF-8 yet.
+	d := newDecoder(data)
+	token, err := d.Token()
+	if err != nil {
+		return nil, errors.Wrap(err, "error decoding token")
+	}
+	if procInst, ok := token.(xml.ProcInst); ok {
+		inst := bytes.ToLower(procInst.Inst)
+		if bytes.Contains(inst, []byte("utf-8")) {
+			data = bytes.ToValidUTF8(data, []byte("\uFFFD"))
+		}
+	}
 
 	channelRSS, errRSS := parseAsRSS(data)
 	if errRSS == nil {
